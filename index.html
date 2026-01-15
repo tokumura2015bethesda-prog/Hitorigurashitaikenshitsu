@@ -324,16 +324,30 @@
     document.getElementById('viewer').style.display = 'flex';
   }
 
-  function updateViewer() {
+    function updateViewer() {
     const item = currentGroup[currentIndex]; if(!item) return;
-    document.getElementById('v-img').src = item[3];
-    document.getElementById('v-floor').innerText = item[1];
-    document.getElementById('v-room').innerText = item[2];
-    document.getElementById('v-desc').innerText = item[5] ? item[5].trim() : "";
-    document.getElementById('v-counter').innerText = `${currentIndex + 1} / ${currentGroup.length}`;
-    document.querySelectorAll('.nav-btn').forEach(b => b.style.display = currentGroup.length > 1 ? 'block' : 'none');
-    resetZoom();
+    
+    // アニメーションのために一度透明にする
+    imgElement.style.opacity = 0;
+    
+    setTimeout(() => {
+      imgElement.src = item[3];
+      document.getElementById('v-floor').innerText = item[1];
+      document.getElementById('v-room').innerText = item[2];
+      document.getElementById('v-desc').innerText = item[5] ? item[5].trim() : "";
+      document.getElementById('v-counter').innerText = `${currentIndex + 1} / ${currentGroup.length}`;
+      
+      // ボタンの表示・非表示
+      document.querySelectorAll('.nav-btn').forEach(b => b.style.display = currentGroup.length > 1 ? 'block' : 'none');
+      
+      resetZoom(); // ズームをリセットして位置を戻す
+      
+      // フワッと表示させる
+      imgElement.style.transition = 'opacity 0.3s ease-in-out';
+      imgElement.style.opacity = 1;
+    }, 50);
   }
+
 
   function changeSlide(n) {
     if (currentGroup.length <= 1) return;
@@ -366,11 +380,23 @@
     else if (!isPinching) { if (scale === 1) { if (currentGroup.length > 1) { currentTranslateX = e.changedTouches[0].screenX - touchStartX; imgElement.style.transform = `translateX(${currentTranslateX}px) scale(1)`; } } else { e.preventDefault(); dragX = e.changedTouches[0].screenX - lastStartX; dragY = e.changedTouches[0].screenY - lastStartY; updateTransform(); } }
   }, {passive: false});
 
-  viewerElement.addEventListener('touchend', e => {
-    imgElement.style.transition = 'transform 0.3s ease-out';
+    viewerElement.addEventListener('touchend', e => {
+    imgElement.style.transition = 'transform 0.3s ease-out, opacity 0.3s';
     if (isPinching) { if (e.touches.length === 0) isPinching = false; return; }
-    if (scale === 1) { if (currentGroup.length > 1) { const threshold = window.innerWidth * 0.25; if (currentTranslateX < -threshold) { changeSlide(1); } else if (currentTranslateX > threshold) { changeSlide(-1); } else { updateTransform(); } } else { updateTransform(); } currentTranslateX = 0; }
+    
+    if (scale === 1) { 
+      const threshold = window.innerWidth * 0.2; // 20%以上スワイプしたら次へ
+      if (currentTranslateX < -threshold) { 
+        changeSlide(1); 
+      } else if (currentTranslateX > threshold) { 
+        changeSlide(-1); 
+      } else { 
+        updateTransform(); 
+      }
+      currentTranslateX = 0; 
+    }
   }, {passive: true});
+
 
   function updateTransform() {
     if (scale > 1) { imgElement.style.transform = `translate(${dragX}px, ${dragY}px) scale(${scale})`; } else { imgElement.style.transform = `translate(0px, 0px) scale(1)`; }
