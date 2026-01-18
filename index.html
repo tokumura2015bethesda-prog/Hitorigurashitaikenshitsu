@@ -35,6 +35,12 @@
     .close-btn { position: absolute; top: 15px; right: 15px; cursor: pointer; font-size: 30px; font-weight: bold; color: #333; z-index: 101; background: rgba(255,255,255,0.85); width: 44px; height: 44px; line-height: 40px; text-align: center; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
     .thumb-section { margin-top: 40px; border-top: 2px solid #ddd; padding-top: 20px; }
     .tel-link { color: inherit; text-decoration: none; cursor: default; }
+    
+    /* ▼▼▼ 追加したスタイル（読み込み文字用） ▼▼▼ */
+    .loading-msg { text-align: center; padding: 40px 0; color: #888; font-size: 0.9rem; animation: blink 1.5s infinite; }
+    @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    /* ▲▲▲ ここまで ▲▲▲ */
+
     @media (max-width: 768px) {
       .marker { width: 16px !important; height: 16px !important; font-size: 10px !important; }
       .marker-badge { width: 11px !important; height: 11px !important; font-size: 8px !important; line-height: 11px !important; top: -6px !important; right: -6px !important; }
@@ -74,8 +80,10 @@
 
   <div class="thumb-section">
     <h3>写真一覧（フロア別）</h3>
-    <div id="floor-lists-container"></div>
-  </div>
+    <div id="floor-lists-container">
+      <p class="loading-msg">写真データを読み込み中...</p>
+    </div>
+    </div>
 
   <footer style="margin-top: 50px; padding: 40px 20px; background: #f1f3f5; text-align: center; border-radius: 10px; color: #555; font-size: 0.9rem; line-height: 1.8;">
     <p style="font-weight: bold; margin-bottom: 12px; color: #333; font-size: 1rem;">お問い合わせ先</p>
@@ -111,7 +119,6 @@
 
   // --- 履歴管理用の初期設定 ---
   window.onload = function() {
-    // 最初の状態を保存
     history.replaceState({ type: 'tab', floor: '外観' }, '');
 
     fetch(GAS_API_URL).then(res => res.json()).then(data => {
@@ -121,24 +128,18 @@
     });
   };
 
-  // ブラウザの「戻る」「進む」を検知
   window.onpopstate = function(event) {
     if (!event.state) return;
-    
-    // ビューアが開いていたら閉じる
     if (document.getElementById('viewer').style.display === 'flex') {
       executeCloseViewer(); 
     }
-
-    // タブの状態を復元
     if (event.state.type === 'tab') {
       executeSwitchFloor(event.state.floor);
     }
   };
 
-  // --- タブ切り替え処理 ---
   function handleTabClick(f) {
-    history.pushState({ type: 'tab', floor: f }, ''); // 履歴に追加
+    history.pushState({ type: 'tab', floor: f }, '');
     executeSwitchFloor(f);
   }
 
@@ -149,9 +150,8 @@
     mScale = 1; mOffsetX = 0; mOffsetY = 0; applyMapTransform();
   }
 
-  // --- ビューア処理 ---
   function openViewer(gk, idx, all) {
-    history.pushState({ type: 'viewer' }, ''); // 履歴に追加（戻るボタンで閉じられるようにする）
+    history.pushState({ type: 'viewer' }, '');
     currentGroup = all ? allData : groupedData[gk]; currentIndex = idx;
     buildSlider(); updateViewerInfo();
     document.getElementById('viewer').style.display = 'flex';
@@ -159,9 +159,8 @@
     applyTransform();
   }
 
-  // 閉じるボタンや背景クリック時
   function requestCloseViewer() {
-    history.back(); // ブラウザの戻るを実行（これによりonpopstateが発火してビューアが閉じる）
+    history.back();
   }
 
   function executeCloseViewer() {
@@ -170,7 +169,6 @@
     resetZoomParams();
   }
 
-  // --- 以下、既存のロジック（そのまま） ---
   function initMapControls() {
     const f = document.getElementById('map-parent-frame');
     f.addEventListener('touchstart', e => {
@@ -222,7 +220,10 @@
   }
 
   function renderFloorThumbs(data) {
-    let c = document.getElementById('floor-lists-container'), fls = {};
+    let c = document.getElementById('floor-lists-container');
+    c.innerHTML = ''; // ▼▼▼ 修正箇所：写真を描画する前に、読み込み中の文字を消去 ▼▼▼
+    
+    let fls = {};
     data.forEach(r => { if (!fls[r[1]]) fls[r[1]] = []; fls[r[1]].push(r); });
     for (let f in fls) {
       let s = document.createElement('div'); s.style.marginBottom = "30px";
