@@ -5,13 +5,39 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   
   <style>
-    /* 基本設定 */
     body { font-family: "Helvetica Neue", Arial, sans-serif; color: #333; margin: 0; background: #f8f9fa; }
-    body.modal-open { overflow: hidden; position: fixed; width: 100%; height: 100%; } /* スクロールロック強化 */
+    body.modal-open { overflow: hidden; position: fixed; width: 100%; height: 100%; }
     header { background: #007BBB; color: white; padding: 1rem; text-align: center; }
     .container { max-width: 900px; margin: auto; padding: 20px; }
     
-    /* タブ・間取り図関連 */
+    /* ▼▼▼ 追加：全体ローディング画面のスタイル ▼▼▼ */
+    #loading-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      transition: opacity 0.5s ease, visibility 0.5s;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #007BBB;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 15px;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .loading-text { color: #666; font-size: 0.9rem; }
+    /* ▲▲▲ ここまで ▲▲▲ */
+
     .tabs { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
     .tab-btn { padding: 10px 20px; cursor: pointer; border: 1px solid #007BBB; background: white; border-radius: 5px; font-weight: bold; transition: 0.3s; flex: 1; min-width: 70px; text-align: center;}
     .tab-btn.active { background: #007BBB; color: white; }
@@ -23,51 +49,34 @@
     .marker { position: absolute; width: 30px; height: 30px; background: rgba(220, 50, 50, 0.6); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px; transition: all 0.2s; border: 2px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3); transform: translate(-50%, -50%); z-index: 5; }
     .marker-badge { position: absolute; top: -8px; right: -8px; background: #FFD700; color: #333; width: 18px; height: 18px; border-radius: 50%; font-size: 11px; font-weight: bold; line-height: 18px; text-align: center; border: 1px solid white; }
     
-    /* ビューア（モーダル）関連 */
     .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 1000; align-items: center; justify-content: center; touch-action: none; }
-    
-    .modal-content { 
-      position: relative; 
-      width: 95%; 
-      max-width: 1100px; 
-      margin: auto; 
-      background: white; 
-      border-radius: 12px; 
-      display: flex; 
-      flex-direction: column; 
-      max-height: 90vh; /* 高さ制限を少し緩める */
-      overflow: hidden; 
-    }
+    .modal-content { position: relative; width: 95%; max-width: 1100px; margin: auto; background: white; border-radius: 12px; display: flex; flex-direction: column; max-height: 90vh; overflow: hidden; }
 
-    /* ▼▼▼ 修正箇所：×ボタンを画面に対して固定（fixed） ▼▼▼ */
     .close-btn { 
-      position: fixed; /* absoluteではなくfixedにする */
+      position: fixed; 
       top: 20px; 
       right: 20px; 
-      /* iPhoneのノッチ（切り欠き）対策：安全なエリアを確保 */
       top: max(20px, env(safe-area-inset-top)); 
-      
       cursor: pointer; 
       font-size: 28px; 
       font-weight: bold; 
       color: #333; 
-      z-index: 2000; /* モーダルより手前に */
+      z-index: 2000; 
       background: rgba(255,255,255,0.9); 
       width: 44px; 
       height: 44px; 
-      line-height: 44px; /* テキストを垂直中央に */
+      line-height: 44px; 
       text-align: center; 
       border-radius: 50%; 
       box-shadow: 0 4px 12px rgba(0,0,0,0.5); 
-      backdrop-filter: blur(4px); /* すりガラス効果 */
+      backdrop-filter: blur(4px); 
     }
-    /* ▲▲▲ ここまで ▲▲▲ */
 
     .img-container { width: 100%; height: 60vh; background: #000; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
     .slider-track { display: flex; width: 100%; height: 100%; position: absolute; top: 0; left: 0; will-change: transform; }
     .slide-item { flex: 0 0 100%; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
     .modal-img { max-width: 100%; max-height: 100%; object-fit: contain; }
-    .modal-text { width: 100%; padding: 25px 40px; background: #fff; box-sizing: border-box; overflow-y: auto; flex: 1; } /* flex:1で残りの高さを埋める */
+    .modal-text { width: 100%; padding: 25px 40px; background: #fff; box-sizing: border-box; overflow-y: auto; flex: 1; }
     
     #v-room { margin: 0 0 10px 0; font-size: 1.6rem; color: #333; }
     #v-desc { font-size: 1.1rem; line-height: 1.7; color: #555; white-space: pre-wrap; margin: 0; }
@@ -78,8 +87,6 @@
     
     .thumb-section { margin-top: 40px; border-top: 2px solid #ddd; padding-top: 20px; }
     .tel-link { color: inherit; text-decoration: none; cursor: default; }
-    .loading-msg { text-align: center; padding: 40px 0; color: #888; font-size: 0.9rem; animation: blink 1.5s infinite; }
-    @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 
     @media (max-width: 768px) {
       .marker { width: 16px !important; height: 16px !important; font-size: 10px !important; }
@@ -92,6 +99,11 @@
   </style>
 </head>
 <body>
+
+<div id="loading-screen">
+  <div class="spinner"></div>
+  <div class="loading-text">内覧データを読み込んでいます...</div>
+</div>
 
 <header><h1>京都市一人暮らし体験室 オンライン内覧</h1></header>
 
@@ -120,9 +132,7 @@
 
   <div class="thumb-section">
     <h3>写真一覧（フロア別）</h3>
-    <div id="floor-lists-container">
-      <p class="loading-msg">写真データを読み込み中...</p>
-    </div>
+    <div id="floor-lists-container"></div>
   </div>
 
   <footer style="margin-top: 50px; padding: 40px 20px; background: #f1f3f5; text-align: center; border-radius: 10px; color: #555; font-size: 0.9rem; line-height: 1.8;">
@@ -136,7 +146,6 @@
 
 <div id="viewer" class="modal" onclick="requestCloseViewer()">
   <span class="close-btn" onclick="requestCloseViewer()">×</span>
-  
   <div class="modal-content" onclick="event.stopPropagation()">
     <div class="img-container">
       <div id="slider-track" class="slider-track"></div>
@@ -151,6 +160,7 @@
     </div>
   </div>
 </div>
+
 <script>
   const GAS_API_URL = "https://script.googleusercontent.com/macros/echo?user_content_key=AehSKLhXGnzIC2gE5UyWBguvXvQ67TDlhntpzzdh9Q4nV9kcwXOPo9XNaMj5WGE1J4U3PicNCAmqKRGZ1RVHQgSAcgX4JDJ23y3eFt7p0B_dVYQvCdG1ryQPBJ0SGUIZ2CNvhPD9WOlt523372OmzLxU2eYZ7nHqu4PS3pA-vutv_1L-i3b3UVJRoKcn0Zc_5v6wXYfQoZzG31Hnm5bN1s_BJ1VXrfh_78JKLSvY5ac4Np-VLiC1voGOj41k7yHVEhJ52ywmg39W43CMRhWcH_kFJKBzlRqnouNkX5b_Lxey&lib=Mp76_62xJm8fQqCNSnmRDrlyIfNZbfkjO";
 
@@ -163,7 +173,16 @@
     fetch(GAS_API_URL).then(res => res.json()).then(data => {
       let cleanData = data.filter(r => r[1] && r[3]);
       cleanData.sort((a, b) => a[1] === '外観' ? -1 : b[1] === '外観' ? 1 : a[1].localeCompare(b[1], undefined, {numeric:true}));
-      allData = cleanData; processData(allData); renderMarkers(); renderFloorThumbs(allData); initMapControls();
+      allData = cleanData; 
+      processData(allData); 
+      renderMarkers(); 
+      renderFloorThumbs(allData); 
+      initMapControls();
+
+      // ▼▼▼ 修正箇所：すべての描画が終わったらローディングを消す ▼▼▼
+      const loader = document.getElementById('loading-screen');
+      loader.style.opacity = '0';
+      setTimeout(() => { loader.style.visibility = 'hidden'; }, 500);
     });
   };
 
@@ -261,7 +280,6 @@
   function renderFloorThumbs(data) {
     let c = document.getElementById('floor-lists-container');
     c.innerHTML = ''; 
-    
     let fls = {};
     data.forEach(r => { if (!fls[r[1]]) fls[r[1]] = []; fls[r[1]].push(r); });
     for (let f in fls) {
@@ -291,6 +309,7 @@
 
   function updateViewerInfo() {
     const item = currentGroup[currentIndex];
+    if(!item) return;
     document.getElementById('v-floor').innerText = item[1];
     document.getElementById('v-room').innerText = item[2];
     document.getElementById('v-desc').innerText = item[5] ? item[5].trim() : "";
